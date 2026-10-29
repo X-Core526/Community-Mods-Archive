@@ -1047,7 +1047,7 @@ ships.push(Quasiralis_273);
 ships.push(Enforcer_X_274);
 
 this.options = {
-  root_mode: "team",
+  root_mode: "survival",
   ships: ships,
   reset_tree: true,
   max_players: 200,
