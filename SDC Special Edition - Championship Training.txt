@@ -1,0 +1,1265 @@
+/*
+STARBLAST DUELING CHAMPIONSHIP (SDC)
+* Mod Founder: Thuliux
+* Mod Developer: Bhpsngum
+* Shipbuilders: Thuliux, Nova, SChickenMan, Nexagon, Admiral Forever, Neuronality and others
+* UI Theme designer: ___
+* Poster designer: Tournebulle
+
+Season 2 (v2.0) - Main version
+
+Requirements: ES2020 (Chrome & Edge 80, Firefox 74, Opera 67, Safari 13.1, NodeJS v14.0.0, fck IE) and above
+
+Mod code for older browsers that supports ES6 can be found here: https://raw.githubusercontent.com/Bhpsngum/SDC-public/master/sdc_es6.js
+*/
+
+let gem_ratio = 1;
+let fixed_gems = false;
+let arena_radius = 15;
+let min_radius_ratio = false;
+let fixed_min_radius = false;
+let allow_full_cargo_pickup = true; // allows ships to pick up gems after the crystal cargo is full
+let max_item_per_ship_selection_screen = 2;
+let shrink_start_time = 1.5; // in minutes
+let shrink_end_time = 0.5; // in minutes
+let shrink_interval = 4; // in seconds
+let edge_dps = 30; // damage per second when standing in the edge of the safe zone
+let dps_increase = 15; //dps increase per 10 blocks farther from the safe zone
+let duel_countdown = 10; // countdown before duel starts (in seconds)
+let duel_duration = 3.5; // in minutes
+let game_duration = 180; // in minutes
+let nodes_count_per_width = 5; // number of arenas (including lobby): n^2
+let TpDelay = 2; // Latency between teleports (in seconds)
+let queueWaitingTime = 10; // waiting time when there are enough players in queue (in seconds)
+let InvitationTimeOut = 3; // timeout after decline/get declined the invitation (in seconds)
+let pendingTpDelay = 5; // GGs after matches is really important. Decide the duration! (in seconds)
+let messageHoist = 5; // the duration one single message thread will stay (in seconds)
+let max_warns_per_chunk = 3; // maximum warnings can be displayed
+let instructor_duration = 2.5; // duration for the instructor saying each sentence in the screen (in seconds)
+let buttonsDelay = 0.1; // button delay, in seconds
+
+let invite_columns = 2;
+let invite_rows = 16;
+
+let InviteScreen = {
+  offsetX: 21,
+  offsetY: 16,
+  width: 58,
+  height: 79,
+  margin: { // by percent each
+    left: 0,
+    right: 0,
+    top: 10,
+    bottom: 15
+  }
+}
+
+InviteScreen.position = ["offsetX", "offsetY", "width", "height"].map(t => InviteScreen[t]);
+InviteScreen.actualWidthPercentage =  100 - InviteScreen.margin.left - InviteScreen.margin.right;
+InviteScreen.actualHeightPercentage = 100 - InviteScreen.margin.top - InviteScreen.margin.bottom;
+
+let introductory_paragraph = [
+  "Welcome to Starblast Dueling Championship (SDC)!",
+  "This is a practise edition where you can duel with Legacy or Revamp speedsters!",
+  "You may invite players to duel or random queue into a duel.",
+  "Good luck and have fun!"
+];
+
+let A_Speedster_Legacy_601 = '{"name":"A-Speedster (Legacy)","designer":"Neuronality","level":6,"model":1,"size":1.5,"specs":{"shield":{"capacity":[200,300],"reload":[6,8]},"generator":{"capacity":[80,140],"reload":[30,45]},"ship":{"mass":175,"speed":[90,115],"rotation":[60,80],"acceleration":[90,140]}},"bodies":{"main":{"section_segments":8,"offset":{"x":0,"y":0,"z":0},"position":{"x":[0,0,0,0,0,0],"y":[-100,-95,0,0,70,65],"z":[0,0,0,0,0,0]},"width":[0,10,40,20,20,0],"height":[0,5,30,30,15,0],"texture":[6,11,5,63,12],"propeller":true,"laser":{"damage":[38,84],"rate":1,"type":2,"speed":[175,230],"recoil":50,"number":1,"error":0}},"cockpit":{"section_segments":8,"offset":{"x":0,"y":-60,"z":15},"position":{"x":[0,0,0,0,0,0,0],"y":[-20,0,20,40,50],"z":[-7,-5,0,0,0]},"width":[0,16,20,16,0],"height":[0,10,15,12,0],"texture":[4]},"side_propulsors":{"section_segments":10,"offset":{"x":50,"y":25,"z":0},"position":{"x":[0,0,0,0,0,0,0,0,0,0],"y":[-20,-15,0,10,20,25,30,40,80,70],"z":[0,0,0,0,0,0,0,0,0,0]},"width":[0,15,20,20,20,15,15,20,10,0],"height":[0,15,20,20,20,15,15,20,10,0],"propeller":true,"texture":[4,4,2,2,5,63,5,4,12]},"cannons":{"section_segments":12,"offset":{"x":30,"y":40,"z":45},"position":{"x":[0,0,0,0,0,0,0],"y":[-50,-45,-20,0,20,30,40],"z":[0,0,0,0,0,0,0]},"width":[0,5,7,10,3,5,0],"height":[0,5,7,8,3,5,0],"angle":-10,"laser":{"damage":[8,12],"rate":2,"type":1,"speed":[100,130],"number":1,"angle":-10,"error":0},"propeller":false,"texture":[6,4,10,4,63,4]}},"wings":{"join":{"offset":{"x":0,"y":0,"z":10},"length":[40,0],"width":[10,20],"angle":[-1],"position":[0,30],"texture":[63],"bump":{"position":0,"size":25}},"winglets":{"offset":{"x":0,"y":-40,"z":10},"doubleside":true,"length":[45,10],"width":[5,20,30],"angle":[50,-10],"position":[90,80,50],"texture":[4],"bump":{"position":10,"size":30}}},"typespec":{"name":"A-Speedster (Legacy)","level":6,"model":1,"code":601,"specs":{"shield":{"capacity":[200,300],"reload":[6,8]},"generator":{"capacity":[80,140],"reload":[30,45]},"ship":{"mass":175,"speed":[90,115],"rotation":[60,80],"acceleration":[90,140]}},"shape":[3,2.914,2.408,1.952,1.675,1.49,1.349,1.263,1.198,1.163,1.146,1.254,1.286,1.689,2.06,2.227,2.362,2.472,2.832,3.082,3.436,3.621,3.481,2.48,2.138,2.104,2.138,2.48,3.481,3.621,3.436,3.082,2.832,2.472,2.362,2.227,2.06,1.689,1.286,1.254,1.146,1.163,1.198,1.263,1.349,1.49,1.675,1.952,2.408,2.914],"lasers":[{"x":0,"y":-3,"z":0,"angle":0,"damage":[38,84],"rate":1,"type":2,"speed":[175,230],"number":1,"spread":0,"error":0,"recoil":50},{"x":1.16,"y":-0.277,"z":1.35,"angle":-10,"damage":[8,12],"rate":2,"type":1,"speed":[100,130],"number":1,"spread":-10,"error":0,"recoil":0},{"x":-1.16,"y":-0.277,"z":1.35,"angle":10,"damage":[8,12],"rate":2,"type":1,"speed":[100,130],"number":1,"spread":-10,"error":0,"recoil":0}],"radius":3.621}}';
+let A_Speedster_Revamp_602 = '{"name":"A-Speedster (Revamp)","designer":"Neuronality","level":6,"model":2,"size":1.6,"specs":{"shield":{"capacity":[200,300],"reload":[6,8]},"generator":{"capacity":[80,140],"reload":[30,45]},"ship":{"mass":230,"speed":[90,121],"rotation":[60,90],"acceleration":[90,135]}},"bodies":{"main":{"section_segments":8,"offset":{"x":0,"y":0,"z":0},"position":{"x":[0,0,0,0,0,0],"y":[-100,-95,0,0,70,65],"z":[0,0,0,0,0,0]},"width":[0,10,40,20,20,0],"height":[0,5,30,30,15,0],"texture":[6,11,5,63,12],"propeller":true,"laser":{"damage":[38,84],"rate":1,"type":2,"speed":[175,230],"recoil":50,"number":1,"error":0}},"cockpit":{"section_segments":8,"offset":{"x":0,"y":-60,"z":15},"position":{"x":[0,0,0,0,0,0,0],"y":[-20,0,20,40,50],"z":[-7,-5,0,0,0]},"width":[0,10,10,10,0],"height":[0,10,15,12,0],"texture":[9]},"side_propulsors":{"section_segments":10,"offset":{"x":50,"y":25,"z":0},"position":{"x":[0,0,0,0,0,0,0,0,0,0],"y":[-20,-15,0,10,20,25,30,40,80,70],"z":[0,0,0,0,0,0,0,0,0,0]},"width":[0,15,20,20,20,15,15,20,10,0],"height":[0,15,20,20,20,15,15,20,10,0],"propeller":true,"texture":[4,4,2,2,5,17,5,4,12]},"cannons":{"section_segments":12,"offset":{"x":30,"y":40,"z":45},"position":{"x":[0,0,0,0,0,0,0],"y":[-50,-45,-20,0,20,30,40],"z":[0,0,0,0,0,0,0]},"width":[0,5,7,10,3,5,0],"height":[0,5,7,8,3,5,0],"angle":-10,"laser":{"damage":[8,12],"rate":2,"type":1,"speed":[100,130],"number":1,"angle":-10,"error":0},"propeller":false,"texture":[6,4,10,4,17,4]}},"wings":{"join":{"offset":{"x":0,"y":0,"z":10},"length":[40,0],"width":[10,20],"angle":[-1],"position":[0,30],"texture":[63],"bump":{"position":0,"size":25}},"winglets":{"offset":{"x":0,"y":-40,"z":10},"doubleside":true,"length":[45,10],"width":[5,20,30],"angle":[50,-10],"position":[90,80,50],"texture":[4],"bump":{"position":10,"size":30}}},"typespec":{"name":"A-Speedster (Revamp)","level":6,"model":2,"code":602,"specs":{"shield":{"capacity":[200,300],"reload":[6,8]},"generator":{"capacity":[80,140],"reload":[30,45]},"ship":{"mass":230,"speed":[90,121],"rotation":[60,90],"acceleration":[90,135]}},"shape":[3.2,3.109,2.569,2.082,1.786,1.589,1.439,1.348,1.278,1.24,1.222,1.338,1.372,1.801,2.197,2.375,2.52,2.637,3.021,3.288,3.665,3.862,3.713,2.645,2.28,2.244,2.28,2.645,3.713,3.862,3.665,3.288,3.021,2.637,2.52,2.375,2.197,1.801,1.372,1.338,1.222,1.24,1.278,1.348,1.439,1.589,1.786,2.082,2.569,3.109],"lasers":[{"x":0,"y":-3.2,"z":0,"angle":0,"damage":[38,84],"rate":1,"type":2,"speed":[175,230],"number":1,"spread":0,"error":0,"recoil":50},{"x":1.238,"y":-0.296,"z":1.44,"angle":-10,"damage":[8,12],"rate":2,"type":1,"speed":[100,130],"number":1,"spread":-10,"error":0,"recoil":0},{"x":-1.238,"y":-0.296,"z":1.44,"angle":10,"damage":[8,12],"rate":2,"type":1,"speed":[100,130],"number":1,"spread":-10,"error":0,"recoil":0}],"radius":3.862}}';
+
+let Spectator_101 = '{"name":"Spectator","level":1,"model":1,"size":0.025,"zoom":0.075,"specs":{"shield":{"capacity":[1e-30,1e-30],"reload":[1000,1000]},"generator":{"capacity":[1e-30,1e-30],"reload":[1,1]},"ship":{"mass":1,"speed":[200,200],"rotation":[1000,1000],"acceleration":[1000,1000]}},"bodies":{"face":{"section_segments":100,"angle":0,"offset":{"x":0,"y":0,"z":0},"position":{"x":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"y":[-2,-2,2,2],"z":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"width":[0,1,1,0],"height":[0,1,1,0],"vertical":true,"texture":[6]}},"typespec":{"name":"Spectator","level":1,"model":1,"code":101,"specs":{"shield":{"capacity":[1e-30,1e-30],"reload":[1000,1000]},"generator":{"capacity":[1e-30,1e-30],"reload":[1,1]},"ship":{"mass":1,"speed":[200,200],"rotation":[1000,1000],"acceleration":[1000,1000]}},"shape":[0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001],"lasers":[],"radius":0.001}}';
+
+let modShip = function(ship, handler) {
+  typeof handler == "function" && [[],["typespec"]].forEach(i => {
+    let param = ship;
+    i.forEach(j => (param = param[j]));
+    handler(param);
+  });
+}
+
+let ships = [];
+ships.push(A_Speedster_Legacy_601);
+ships.push(A_Speedster_Revamp_602);
+
+
+let ships_count = ships.length;
+let zeroes = [1e-30, 1e-30];
+
+if (!game.custom.ship_infos) {
+  let ship_infos = ships.map(i => {
+    let t = JSON.parse(i), clone = JSON.parse(i);
+    modShip(clone, function (ship) {
+      ship.specs.generator = {
+        capacity: zeroes,
+        reload: zeroes
+      }
+      Object.assign(ship.specs.ship, {
+        speed: zeroes,
+        rotation: zeroes,
+        acceleration: zeroes,
+      });
+      ship.model += ships_count;
+      delete ship.specs.ship.dash;
+    });
+    clone.typespec.code = clone.level * 100 + clone.model;
+    ["bodies","wings"].map(i => Object.values(clone[i]||{})).flat().filter(i => i).forEach(body => {
+      delete body.laser;
+    });
+    clone.typespec.lasers = [];
+    ships.push(JSON.stringify(clone));
+    return {name: t.name, designer: t.designer||"", code: t.level*100 + t.model}
+  }),
+  codes = ship_infos.map(info => info.code),
+  maxNamelength = Math.max(...ship_infos.map(info => info.name.length)),
+  maxDesignerlength = Math.max(...ship_infos.map(info => info.designer.length)),
+  max_ship_items = Math.max(1, max_item_per_ship_selection_screen) || 1, temp = [];
+
+  while (ship_infos.length > 0) temp.push(ship_infos.splice(0, max_ship_items));
+
+  ship_infos = temp;
+  Object.assign(game.custom, {
+    ship_infos, codes, maxNamelength, maxDesignerlength, max_ship_items
+  })
+}
+
+let { ship_infos, codes, maxNamelength, maxDesignerlength, max_ship_items } = game.custom;
+
+let ship_infos_flattened = ship_infos.flat();
+
+let getShipsPage = function (ship) {
+  let custom = ship?.custom || {}, ship_info = ship_infos[custom.ships_page];
+  if (Array.isArray(ship_info)) return {index: +custom.ships_page, list: ship_info};
+  custom.ships_page = 0;
+  return {index: 0, list: ship_infos[0]}
+}
+
+ships.push(Spectator_101);
+
+let map_size = 200, rand = function(num) {
+  return Math.floor(Math.random()*num)
+}, soundtracks = ["argon","crystals"], n = Math.round(Math.max(nodes_count_per_width,1)), vocabulary = [
+  {text: "Duel", icon:"\u00be", key:"D"},
+  {text: "Me", icon:"\u004f", key:"E"},
+  {text: "$#%!&", icon: "\u{1f92c}", key: "F"},
+  {text: "GoodGame", icon:"\u00a3", key:"G"},
+  {text: "Hello", icon:"\u0046", key:"H"},
+  {text: "Lag", icon:"\u{231B}", key:"I"},
+  {text: "Leader", icon:"\u002e", key:"L"},
+  {text: "No", icon:"\u004d", key:"N"},
+  {text: "You", icon:"\u004e", key:"O"},
+  {text: "How?!", icon:"\u004b", key:"Q"},
+  {text: "Sorry", icon:"\u00a1", key:"S"},
+  {text: "Wait", icon:"\u0048", key:"T"},
+  {text: "Lose", icon:"\u{1F948}", key:"U"},
+  {text: "Thanks", icon:"\u0041", key:"X"},
+  {text: "Yes", icon:"\u004c", key:"Y"},
+  {text: "Win", icon:"\u{1F947}", key:"W"},
+];
+
+while (codes.length > 5) codes.splice(rand(codes.length),1);
+
+this.options = {
+  map_size: map_size,
+  custom_map: "",
+  starting_ship: 801,
+  ships: ships,
+  reset_tree: true,
+  max_players: (Math.pow(n,2)-1)*4,
+  radar_zoom: map_size/arena_radius/2,
+  weapons_store: false,
+  max_level: 1,
+  speed_mod: 1.2,
+  choose_ship: codes,
+  asteroids_strength: 1e6,
+  crystal_value: 0,
+  vocabulary: vocabulary,
+  soundtrack: soundtracks[rand(soundtracks.length)]+".mp3",
+  // anti-cheat features
+  mines_self_destroy: true,
+  mines_destroy_delay: 0,
+  projectile_speed: Number.MAX_VALUE
+}
+// game components
+let modUtils = {
+  setTimeout: function(f,time){
+    this.jobs.push({f: f,time: game.step+time});
+  },
+  jobs: [],
+  tick: function(){
+    let t = game.step;
+    for (let i=this.jobs.length-1;i>=0;i--){
+      let job = this.jobs[i];
+      if (t>=job.time){
+        try {
+          job.f();
+        }
+        catch (err){
+        }
+        this.jobs.splice(i,1);
+      }
+    }
+  }
+}, insideRoundCornerCustomLayout = function (h, s, l, custom = [], scale = 1) {
+  let fill = `hsla(${h},${s}%,${l}%, 1)`;
+  for (let cp of custom) {
+    if (!cp.forceCustomColor && (cp.type == "text" || cp.type == "player")) cp.color = fill;
+    if (!cp.forceCustomFill) delete cp.fill;
+    if (!cp.forceCustomStroke) delete cp.stroke;
+    delete cp.forceCustomColor;
+    delete cp.forceCustomFill;
+    delete cp.forceCustomStroke
+  }
+  let radius = 20 * scale, diameter = 2 * radius;
+  return [
+    { type: 'box', position: [0, 0, 100, 100], stroke: fill, fill: `hsla(${h}, ${s}%, ${l}%, ${button_opacity})`, width: 10 * scale },
+    { type: 'round', position: [-radius, -radius, diameter, diameter], fill: fill },
+    { type: 'round', position: [100-radius, -radius, diameter, diameter], fill: fill },
+    { type: 'round', position: [100-radius, 100-radius, diameter, diameter], fill: fill },
+    { type: 'round', position: [-radius, 100-radius, diameter, diameter], fill: fill },
+    ...custom
+  ]
+}, buttonCustomUI = function (ship, id, position, visible, clickable, shortcut, custom = [], h, s = 100, l = 50, scale = 1) {
+  sendUI(ship, {
+    id,
+    position,
+    visible,
+    clickable: clickable ?? visible,
+    shortcut,
+    components: insideRoundCornerCustomLayout(h, s, l, custom, scale)
+  })
+}, buttonBasicUI = function (ship, id, position, visible, clickable, shortcut, text, h, s = 100, l = 50, scale = 1) {
+  buttonCustomUI(ship, id, position, visible, clickable, shortcut, [
+    { type: 'text', position: [0, 20, 100, 30], value: text },
+    { type: 'text', position: [0, 50, 100, 30], value: `[${shortcut}]` }
+  ], h, s, l, scale)
+}, setPicker = function(ship, isActive) {
+  isActive = ship.alive && !!isActive;
+  let bool = !!ship.custom.spectate
+  buttonBasicUI(ship, "spectate", [10,33,10,9], isActive, null, "K", "SPECTATE: "+ (bool?"ON":"OFF"), 180);
+  let t = 0, w = 50/n, nearest = ArenaManager.findNearest(ship);
+  ArenaManager.list.forEach(arena => {
+    let text = arena.lobby ? "Lobby" : ("Arena " + arena.index), i = arena.originalIndex;
+    let compo = [
+      {type: "text", position: [20,0,60,100], value: text}
+    ];
+    arena === nearest && compo.push({type: "text", position: [20,0,60,40], value: "You are here"});
+    !arena.isAvailable && !arena.lobby && compo.push({type: "text", position: [20,60,60,40], value: "Duel ongoing"});
+    buttonCustomUI(ship, "n" + i, [25 + (i%n)*w, 35 + Math.trunc(i/n)*w , w, w], bool&&isActive&&ship.custom.mapped, null, null, compo, 180/(Math.pow(n,2))*(2*i+1))
+  });
+  let ship_info = getShipsPage(ship).list, wt = Math.PI*2/ship_info.length, br = 21.5;
+  ship_info.forEach((info, i) => {
+    let nspace = new Array(maxNamelength - info.name.length).fill(" ").join(""), dspace = new Array(maxDesignerlength - info.designer.length).fill(" ").join(""), compo = [
+      {type: "text", position: [10,0,80,100], value: nspace + info.name + nspace}
+    ];
+    (ship.type === info.code) && compo.push({type: "text", position: [10,0,80,40], value: "    ✓    "});
+    (info.designer) && compo.push({type: "text", position: [10,60,80,40], value: dspace + "by: " + info.designer + dspace});
+    buttonCustomUI(ship, "s" + i, [50 + br*Math.cos(wt*i-Math.PI/2)-5, 50 + br*Math.sin(wt*i-Math.PI/2)-3.5, 10, 9], !bool&&isActive&&ship.custom.shipped, null, null, compo, (180/ship_info.length*(2*i+1)));
+  });
+  if (ship_info.length < max_ship_items) for (let i = ship_info.length; i < max_ship_items; i++) sendUI(ship, {
+    id: "s"+i,
+    visible: false
+  });
+  let multipleShipsPages = ship_infos_flattened.length > max_item_per_ship_selection_screen;
+  sendUI(ship, {
+    id: "shipview",
+    visible: !bool&&isActive&&ship.custom.shipped,
+    clickable: false,
+    position: [35,35,30,60],
+    components: [
+      {type: "text", position: [0,65,100,10], value: "Press 7 for previous and 8 for next ship", color: dfl_tcl},
+      {type: "round", position: [0,0,100,30/60*100], fill: "hsla(0, 0%, 0%, 0)", width: 1, stroke: dfl_tcl},
+      ...(multipleShipsPages ? [{type: "text", position: [0,85,100,10], value: `Page ${ship.custom.ships_page + 1}/${ship_infos.length}`, color: dfl_tcl}] : [])
+    ]
+  });
+  if (multipleShipsPages) {
+    buttonBasicUI(ship, "spprev", [25,85,10,8], !bool&&isActive&&ship.custom.shipped, null, "B", "Previous", 0);
+    buttonBasicUI(ship, "spnext", [65,85,10,8], !bool&&isActive&&ship.custom.shipped, null, "M", "Next", 0);
+  }
+  buttonBasicUI(ship, "map", [10,42,10,9], bool&&isActive, null, "M", (ship.custom.mapped?"Hide":"Show") + " Map", 80);
+  let inviters = [...ship.custom.inviters.keys()].filter(id => {
+    let s = game.findShip(id);
+    return s && s != ship && !s.custom.isReady() && !s.custom.inMatch()
+  }).length;
+  buttonBasicUI(ship, "invite", [10,42,10,9], !bool&&isActive, null, "V", ship.custom.invite_shown ? "Close" : `Invites${inviters > 0 ? (" (" + inviters + ")") : ""}`, 80);
+  sendUI(ship, {
+    id: "mapview",
+    visible: bool&&isActive&&ship.custom.mapped,
+    clickable: false,
+    position: [30,85,40,10],
+    components: [
+      {type: "text", position: [0,0,100,100], value: "Press 9 or 0 to toggle between arenas", color: dfl_tcl}
+    ]
+  });
+  ship_infos_flattened.length > 1 && buttonBasicUI(ship, "chooser", [0,33,10,9], isActive, null, "P", ship.custom.shipped ? "Close" : "Change ship", 210);
+  buttonBasicUI(ship, "ready", [0,42,10,9], isActive, null, "A", (ship.custom.isReady() ? "" : "Not") + " Ready", (ship.custom.isReady()?120:0));
+  let ships_list = [];
+  let index = 0;
+  for (let id = 0; id <= game.custom.maxID; ++id) {
+    let s;
+    if (ship.custom.invite_shown && isActive && !bool && (s = game.findShip(id)) != null && s != ship && !s.custom.isReady() && !s.custom.inMatch()) {
+      let isInvited = !!ship.custom.inviters.get(id);
+      let hasInvite = isInvited || !!ship.custom.inviting.get(id);
+      let UIList = JSON.parse(JSON.stringify(InviteButtons));
+      UIList[0].visible = !hasInvite;
+      UIList[1].visible = hasInvite;
+      UIList[2].visible = isInvited;
+      ships_list.push({id, UIList});
+      ++index
+    }
+    else for (let jid of ["invite", "accept", "decline"]) sendUI(ship, {id: jid + id, visible: false})
+  }
+  let total_invite_pages = Math.ceil(ships_list.length / total_invites_per_page);
+  let multipleInvitePages = total_invite_pages > 1;
+  ship.custom.invite_page = Math.trunc(Math.max(Math.min(ship.custom.invite_page, total_invite_pages), -1)) || 0;
+  let ui_list = [];
+  if (ship.custom.invite_page == total_invite_pages) ship.custom.invite_page = 0;
+  else if (ship.custom.invite_page < 0) ship.custom.invite_page = total_invite_pages - 1;
+  ships_list.forEach(({id, UIList}, index) => {
+    if (ship.custom.invite_page * total_invites_per_page <= index && index < (ship.custom.invite_page + 1) * total_invites_per_page) {
+      index = index % total_invites_per_page;
+      let s = game.findShip(id);
+      let row = Math.trunc(index / invite_columns), column = (index % invite_columns);
+      let offsetX = InviteScreen.offsetX + (column + 1) * actual_width, offsetY = InviteScreen.offsetY + (row * pHeight + 10) * InviteScreen.height / 100;
+      for (let ui of UIList) buttonCustomUI(ship, ui.name + id, [offsetX -= ui.visible * actual_height, offsetY, actual_height, actual_height], ui.visible, null, null, [
+        {type: "text", position: [0,0,100,100], value: ui.symbol}
+      ], ui.hue);
+      let actual_position = [InviteScreen.margin.left + column * pWidth, InviteScreen.margin.top + row * pHeight, pWidth - pHeight * UIScale * UIList.filter(ui => ui.visible).length, pHeight];
+      let infoHue = (column + row) % 2 == 0 ? 180 : 60;
+      ui_list.push(
+        {type: "box", position: actual_position, fill: `hsla(${infoHue}, 100%, 50%, ${button_opacity})`, forceCustomFill: true},
+        {type: "player", id: id, position: [actual_position[0], actual_position[1] + (pHeight - playerTextHeight) / 2, actual_position[2], playerTextHeight], color: `hsla(${infoHue}, 100%, 50%, 1)`, forceCustomColor: true, align: "left"}
+      );
+    }
+    else for (let jid of ["invite", "accept", "decline"]) sendUI(ship, {id: jid + id, visible: false})
+  });
+  buttonBasicUI(ship, "invprev", [25,85,10,8], !!ship.custom.invite_shown&&isActive&&!bool&&multipleInvitePages, null, "B", "Previous", 0);
+  buttonBasicUI(ship, "invnext", [65,85,10,8], !!ship.custom.invite_shown&&isActive&&!bool&&multipleInvitePages, null, "M", "Next", 0);
+  buttonCustomUI(ship, "invite_screen", InviteScreen.position, !!ship.custom.invite_shown&&isActive&&!bool, false, null, [
+    {type: "text", position: [InviteScreen.margin.left, 0, InviteScreen.actualWidthPercentage, InviteScreen.margin.top], value: "INVITES"},
+    ...(multipleInvitePages ? [{type: "text", position: [InviteScreen.margin.left, 100 + ((10 - textHeight + 1) / 20 - 1) * InviteScreen.margin.bottom, InviteScreen.actualWidthPercentage, InviteScreen.margin.bottom * (textHeight - 1) / 10], value: `Page ${ship.custom.invite_page + 1}/${total_invite_pages}`, color: dfl_tcl}] : []),
+    {type: "text", position: [0, 0, pWidth - pHeight * UIScale * 2, playerTextHeight], value: " "}, // player component scale
+    ...ui_list
+  ], 60, 100, 50, 0.25);
+},
+InviteButtons = [
+  {
+    name: "invite",
+    symbol: "✉",
+    hue: 240,
+  },
+  {
+    name: "decline",
+    symbol: "×",
+    hue: 0
+  },
+  {
+    name: "accept",
+    symbol: '✓',
+    hue: 120
+  }
+],
+total_invites_per_page = invite_columns * invite_rows,
+pWidth = InviteScreen.actualWidthPercentage / invite_columns,
+pHeight = InviteScreen.actualHeightPercentage / invite_rows,
+actual_height = pHeight * InviteScreen.height / 100,
+actual_width = pWidth * InviteScreen.width / 100,
+UIScale = InviteScreen.height / InviteScreen.width,
+warn_height = Math.max(0, 100/max_warns_per_chunk) || 100,
+spectator = 101,
+dfl_tcl = "hsla(210, 50%, 87%, 1)",
+lcolor = "hsla(0, 0%, 100%, 1)",
+black = "hsla(0, 0%, 0%, 1)",
+button_opacity = 0.35,
+toTick = min => min*3600 + 60, // precision +1s
+r = arena_radius * 10,
+d = 2000/n - 2*r,
+textHeight = 7,
+playerTextHeight = pHeight * textHeight / 10,
+offsetY = (100 / 11 - textHeight) / 2,
+pos = function(x) {
+  return (r + d/2)*(2*x + 1)
+}, t = function(x,p) {
+  let o = x+map_size*5, zoom = 10/map_size, rsize = p;
+  return Math.max(o*zoom-rsize,0) || 0;
+}, grids = Array(n).fill(0).map((f,i) => Array(n).fill(0).map((v,j) => [-map_size*5 + pos(j), map_size*5 - pos(i)])).flat(), lobby = Math.trunc((grids.length-1)/2), leaderboard = [], getStat = function(ship, stateName) {
+  return +((ship||{}).custom||{})[stateName]||0;
+}, updatescoreboard = function (game) {
+  leaderboard = game.ships.map(ship => ({
+    id: ship.id,
+    wins: getStat(ship, "wins"),
+    losses: getStat(ship, "losses"),
+    draws: getStat(ship, "draws"),
+    isLastLost: !!ship.custom.isLastLost,
+    lastMatchStep: +ship.custom.lastMatchStep || -1
+  })).sort((a,b) => {
+    let d01 = Math.max(a.wins,a.losses,a.draws), d02 = Math.max(b.wins,b.losses,b.draws);
+    if (d01 == 0 || d02 == 0 && (d01+d02) != 0) return d02 - d01;
+    let dwins = b.wins - a.wins;
+    if (dwins !== 0) return dwins;
+    let dlosses = a.losses - b.losses;
+    if (dlosses !== 0) return dlosses;
+    let ddraws = b.draws - a.draws;
+    if (ddraws !== 0) return ddraws;
+    let lastStatusRank = (a.isLastLost != b.isLastLost) ? (a.isLastLost - b.isLastLost) : ((a.isLastLost ? -1 : 1) * (b.lastMatchStep - a.lastMatchStep));
+    return isNaN(lastStatusRank) ? (a.id - b.id) : lastStatusRank
+  });
+  leaderboard.forEach((data, index) => {
+    let ship = game.findShip(data.id);
+    if (ship != null) {
+      ship.custom.rank = index + 1;
+      ship.set({score: leaderboard.length - ship.custom.rank})
+    }
+  })
+  let t = ["Wins","Draws","Losses"], c = [120, 60, 0], tcl = [black, black, dfl_tcl], f = leaderboard.slice(0,10), indents = t.map(i => (Math.max(...f.map(x => x[i.toLowerCase()])) || 0).toString().length*textHeight / 2 + textHeight / 2), idn = indents.map((i,j) => 100 - indents.slice(j,3).reduce((a,b)=>a+b,0)), scoreboard = {
+    id: "scoreboard",
+    visible: true,
+    position: [0,0,100,100],
+    components: [
+      {type: "box", position:[0,0,100,100/11], fill: "hsla(210, 20%, 33%, 1)"},
+      {type: "text", position: [0,offsetY,100,textHeight], color: lcolor, value: "Players", align: "left"},
+      {type: "text", position: [0,offsetY,100,textHeight], color: lcolor, value: " "}, // player component scale
+      ...t.map((field,i) => [
+        {type: "box", position:[idn[i],0,indents[i],100/11], fill: "hsla("+c[i]+", 100%, 50%, 1)"},
+        {type: "text", position: [idn[i],offsetY,indents[i],textHeight], color: tcl[i], value: field[0]}
+      ]).flat(),
+      ...f.map((info,i) => [
+        {type: "player", position: [0,(i+1)*100/11,idn[0],100/11], id: info.id, color: game.findShip(info.id)?.custom?.isReady?.()?"hsla(120,100%,50%,1)":lcolor, align: "left"},
+        ...t.map((stat,j) => [
+          {type: "text", position: [idn[j],(i+1)*100/11 + offsetY,indents[j],textHeight], color: lcolor, value: getStat(game.findShip(info.id), stat.toLowerCase()), align: "right"}
+        ]).flat()
+      ]).flat(),
+    ]
+  }
+  for (let ship of game.ships) {
+    let csc = JSON.parse(JSON.stringify(scoreboard)), index = leaderboard.slice(0,10).map(i => i.id).indexOf(ship.id);
+    if (index == -1) {
+      index = 9;
+      csc.components.splice(csc.components.length-4,4,
+        {type: "player", position: [0,1000/11,100,100/11], id: ship.id, color: lcolor, align: "left"},
+        ...t.map((stat,j) => [
+          {type: "text", position: [idn[j],1000/11 + offsetY,indents[j],textHeight], color: dfl_tcl, value: getStat(ship, stat.toLowerCase()), align: "right"}
+        ]).flat()
+      );
+    }
+    csc.components.unshift({type:"box",position:[0,(index+1)*100/11,100,100/11],fill:"hsla(210, 24%, 29%, 0.5)"});
+    sendUI(ship, csc);
+  }
+}, dist = function(x1,y1,x2,y2) {
+  return Math.sqrt((x1-x2)**2+(y1-y2)**2);
+}, max = function(ship, type) {
+  if (ship != null) {
+    if (ship.custom.spectate) ship.set({type: spectator});
+    else {
+      if (type != null || (ship.custom.type == spectator && !ship.custom.spectator)) {
+        type = type || ship.custom.prevShipCode || ship.custom.type;
+        ship.custom.prevShipCode = null;
+        ship.custom.type = (ship_infos_flattened.find(info => info.code === type)||ship_infos_flattened[0]).code;
+        ship.set({type: ship.custom.type});
+      }
+    }
+    ship.set({stats: 88888888, crystals: 0, shield: 1e5});
+  }
+}, rekt = function (ship,num){
+  if (ship.shield<num){
+    let val=ship.crystals + ship.shield;
+    if (val < num) ship.set({kill:true});
+    else ship.set({crystals:val-num,shield:0});
+  }
+  else ship.set({shield:ship.shield-num});
+}, setBackgroundCard = function(id, src, x, y, scalex, scaley) {
+  game.setObject({
+    id: id,
+    type: {
+      id: id,
+      obj: "https://starblast.data.neuronality.com/mods/objects/plane.obj",
+      emissive: src,
+      diffuse: src,
+      emissiveColor: 0xFFFFFF,
+      shininess: 0,
+      transparent: true
+    },
+    position: {x: x, y: y, z: 0},
+    rotation: {x: Math.PI, y: 0, z: 0},
+    scale: {x: scalex, y: scaley, z: 36}
+  })
+}, announce = function(ship, ...data) {
+  sendUI(ship, {
+    id: "message",
+    position: [25,15,50,50],
+    visible: !!ship.custom.instructorHidden,
+    components: data.map((j,i) => {
+      let text, color;
+      if (Array.isArray(j)) {
+        text = j[0];
+        color = "hsla("+j[1]+",100%,50%,1)";
+      }
+      else {
+        text = j;
+        color = dfl_tcl
+      }
+      return {type:"text",position:[0,10*i,100,10],value:text,color:color}
+    })
+  });
+}, FormatTime = function(time, forced) {
+  let array = [Math.floor(time/3600), Math.floor((time%3600)/60)]
+  if (forced && array[0] == 0) array.splice(0,1);
+  return array.map(i => i<10&&!forced?"0"+i.toString():i).join(":");
+}, check = function(game, forced, isGameOver) {
+  modUtils.tick();
+  for (let ship of game.ships) {
+    if (!ship.custom.joined) {
+      Radar.set(ship);
+      sendUI(ship, {
+        id: "block",
+        position: [4,3,12,6],
+        components:[
+          {type:'box',position:[0,0,100,100],fill:dfl_tcl},
+          {type: "text", position: [0,0,100,100], value: "We don't use points here.", color: black}
+        ]
+      });
+      sendUI(ship, {
+        id: "block2",
+        clickable: true,
+        shortcut: String.fromCharCode(187),
+        position: [65,0,10,10]
+      });
+      // for steam client when there is a exit button in the bottom left corner
+      sendUI(ship, {
+        id: "steam_exit_block",
+        position:[0,95,20,5],
+        clickable: true
+      });
+      sendUI(ship, {
+        id: "sprev",
+        visible: false,
+        clickable: true,
+        shortcut: "7"
+      });
+      sendUI(ship, {
+        id: "snext",
+        visible: false,
+        clickable: true,
+        shortcut: "8"
+      });
+      sendUI(ship, {
+        id: "nprev",
+        visible: false,
+        clickable: true,
+        shortcut: "9"
+      });
+      sendUI(ship, {
+        id: "nnext",
+        visible: false,
+        clickable: true,
+        shortcut: "0"
+      });
+      clearInds(ship);
+      introductory_paragraph.forEach((sentence, i) => modUtils.setTimeout(function(){ship.instructorSays(sentence, "Zoltar")}, i*instructor_duration*60));
+      modUtils.setTimeout(function(){
+        ship.hideInstructor();
+        ship.custom.instructorHidden = true;
+      },introductory_paragraph.length*instructor_duration*60);
+      ship.custom = {
+        ship: ship,
+        TpTimestamp: -1,
+        pendingTp: -1,
+        shipped: false,
+        joined: true,
+        isLastLost: false,
+        arena: ArenaManager.lobby,
+        isReady: function() {return (this.ready || this.paired) && !this.spectate && this.ship.alive && this.arena.lobby},
+        inMatch: function () {return (!this.arena.lobby && (this.arena.inMatch || this.arena.inCountdown))},
+        ships_page: 0,
+        inviters: new Map(),
+        inviting: new Map(),
+        invite_timeout: new Map()
+      }
+      game.custom.maxID = Math.max(game.custom.maxID, ship.id) || 0;
+      if (isGameOver) gameover(ship);
+    }
+    else if (isGameOver && !ship.custom.exited) gameover(ship, true)
+  }
+  if (game.step % 30 === 0 || forced) {
+    for (let ship of game.ships) {
+      let t = ship.custom.arena, tp = ship.custom.TpTimestamp, ptp = ship.custom.pendingTp;
+      if (!(t instanceof Arena)) t = ArenaManager.lobby;
+      if (typeof tp != "number") {
+        tp = -1;
+        t = ArenaManager.lobby;
+      }
+      if (typeof ptp != "number") ptp = -1;
+      let grad = t.radius, distance = t.distTo(ship) - (t.lobby?r:grad), text = "Warning: Out of the safe zones!";
+      if (distance > 0 && (tp == -1 || t.lobby) && ptp == -1 && !ship.custom.spectate) {
+        if (t.lobby) ArenaManager.set(ship, lobby, true);
+        else {
+          setPicker(ship, false);
+          addWarn(ship, text, true);
+          game.step % 60 === 0 && rekt(ship, edge_dps + dps_increase*(distance/10))
+        }
+      }
+      else {
+        removeWarn(ship, text, true);
+        if (t.lobby || ship.custom.spectate) {
+          setPicker(ship, true);
+          ship.set({invulnerable: 600, idle: false});
+          max(ship);
+        }
+        else setPicker(ship, false)
+      };
+      // check if user is CONSIDERED as spectating or not
+      let isSpectate = !!ship.custom.spectate; // let's see their intention first
+      if (!isSpectate) { // oh they don't want to spectate? let's check further
+        if (!t.lobby) isSpectate = false; // they don't belong to the lobby, looks like that they're dueling, so not spectating
+        else { // or what if they belong to the lobby?
+          if (t.distTo(ship) > r) isSpectate = true; // they're out of lobby while not spectating? ok they're spectating
+          else isSpectate = false; // and vice versa.
+        }
+      }
+      ship.set({
+        collider: !isSpectate
+      });
+      ship.emptyWeapons();
+      ship.custom.arena = t;
+      waitnextround(ship);
+      let tw = (Array.isArray(ship.custom.warn)?ship.custom.warn:[]).filter(Array.isArray).slice(-max_warns_per_chunk), i = 0;
+      while (i<tw.length) {
+        let wt = tw[i];
+        if (typeof wt[1] == "number" && wt[1] !== -1 && game.step - wt[1] > messageHoist*60) tw.splice(i,1);
+        else i++;
+      }
+      ship.custom.warn = tw;
+      warn(ship);
+      if (game.step - ptp > pendingTpDelay * 60 && ptp !== -1) {
+        ptp = -1;
+        tp = game.step
+      }
+      if (game.step - tp > TpDelay * 60 && tp !== -1) tp = -1;
+      ship.custom.TpTimestamp = tp;
+      ship.custom.pendingTp = ptp;
+      // text announced
+      let arenaStatus = ship.custom.arena, announceText = [];
+      if (!ArenaManager.isRunning(game)) announceText = ['Game finished!', '', ship.custom.endgameText || ""];
+      else if (arenaStatus.lobby) {
+        if (!ship.custom.invite_shown) {
+          announceText = ["",[("You are "+(ship.custom.isReady()?"":"not ")+"ready").toUpperCase(), ship.custom.isReady()?120:10]];
+          let header = ["Welcome to SDC 2.0"], nearest = ArenaManager.findNearest(ship);
+          if (ship.custom.spectate && nearest !== ArenaManager.lobby) {
+            header = ["Spectating Arena " + nearest.index];
+            if (!nearest.isAvailable) {
+              if (nearest.inCountdown) header.push('Dueling in countdown: ' + FormatTime(nearest.countdown));
+              else if (nearest.inMatch) header.push('Duel ends in: ' + FormatTime(nearest.duration));
+              else header.push('Duel finished')
+            }
+            else header.push('No duels are happening')
+          }
+          else header.push("");
+          announceText.unshift(...header)
+        }
+      }
+      else if (arenaStatus.inCountdown) announceText = ["Ready?","", FormatTime(arenaStatus.countdown,true)];
+      announce.call(this, ship, ...announceText);
+      // small text
+      let smallText = [];
+      if (arenaStatus.lobby) smallText = ["Duelers in queue: " + ArenaManager.waiting_count + (ArenaManager.waiting_time > 0 ? ` (${Math.trunc(ArenaManager.waiting_time / 60)})` : "")];
+      else if (arenaStatus.inCountdown) smallText = ["Preparing ships..."];
+      else smallText = ["Time left: " + FormatTime(arenaStatus.duration)];
+      if (!ship.custom.arena.lobby) smallText.push("Arena " + arenaStatus.index);
+      setStats(ship, ...smallText)
+    }
+    updatescoreboard(game);
+  }
+  if (allow_full_cargo_pickup) for (let ship of game.ships) {
+    if (ship.custom.inMatch()) {
+      let maxgems = Math.pow(Math.trunc(ship.custom.type/100),2)*20;
+      if (ship.crystals == maxgems) ship.set({crystals: maxgems-1})
+    }
+  }
+}, waitnextround = function (ship, forced) {
+  if (ship.custom.arena.lobby || forced) {
+    let w = "";
+    let verbs = ["won","drew","lost"], pstats = ["Win","Draw","Lose"];
+    w = "You ";
+    for (let i = 0; i < pstats.length; i++) {
+      if (ship.custom["just"+pstats[i]]) {
+        w+=verbs[i];
+        break;
+      }
+    }
+    if (w == "You ") w = "";
+    else w+=" in the latest round!";
+    if (w) addWarn(ship, w);
+  }
+}, warn = function (ship) {
+  let war = (Array.isArray(ship.custom.warn)?ship.custom.warn:[]).filter(Array.isArray), wh = warn_height*13/97, t = 0;
+  sendUI(ship, {
+    id: "warn",
+    position: [25,3,50,97],
+    visible: true,
+    clickable: false,
+    components: war.map(message => ({type: "text", position: [0,(message[2]!=null)?message[2]:(wh*t++),100,wh], value: message[0], color: "hsla(60,100%,50%,1)"}))
+  });
+}, clearInds = function(ship) {
+  setStates(ship, false, false, false);
+  ship.custom.ready = false;
+  ship.custom.wait = false;
+  ship.custom.warn = [];
+  ship.custom.pendingTp = -1;
+}, setStats = function(ship, ...stats) {
+  sendUI(ship, {
+    id: "stat",
+    position: [3,28,17,15],
+    visible: true,
+    components: stats.flat().map((j,i) => ({type: "text",position:[0,33*i,80,33],value:j,color:dfl_tcl}))
+  });
+}, setStates = function (ship, ...states) {
+  let r = ["Win","Lose","Draw"];
+  for (let i = 0; i < states.length; i++) ship.custom["just"+r[i]] = states[i];
+}, gameover = function (ship, wait) {
+  if (ship != null) {
+    ship.custom.exited = true;
+    modUtils.setTimeout(function(){
+      ship.gameover({
+        "Wins": getStat(ship, "wins"),
+        "Draws": getStat(ship, "draws"),
+        "Losses": getStat(ship, "losses"),
+        "Rank": +ship.custom.rank ||"Unranked"
+      })
+    }, wait?300:0)
+  }
+}, sendUI = function(ship, UI) {
+  return ship != null && ship.setUIComponent(parseUI(UI))
+}, Radar = {
+  UI: {
+    id: "radar_background",
+    components: []
+  },
+  update: function (game, needsUpdate) {
+    this.UI.components = ArenaManager.list.map(p => {
+      let rsize = 10/map_size*p.radius;
+      return {type: "round", position:[t(p.x, rsize), t(-p.y, rsize), rsize*2, rsize*2], width: 1, stroke: "hsla(240,100%,50%,1)", fill: "hsla(0, 0%, 0%, 0)"}
+    });
+    return needsUpdate && this.set(game)
+  },
+  set: function (ship) {
+    return sendUI(ship, this.UI)
+  }
+}, parseUI = function (UI) {
+  try { UI = new Object(JSON.parse(JSON.stringify(UI))) } catch (e) { UI = {} }
+
+  let id;
+  try { id = String(UI.id) } catch (e) { id = '' }
+
+  let parsedUI = {
+    id: id,
+    position: UI.position,
+    visible: UI.visible,
+    clickable: UI.clickable,
+    shortcut: UI.shortcut,
+    components: UI.components
+  }
+
+  if (parsedUI.visible || parsedUI.visible == null) {
+    delete parsedUI.visible;
+    let position = parsedUI.position, count = 0;
+    for (let i = 0 ; i < 4 ; i++) {
+      let pos = (position||{})[i];
+      if (pos == null || pos == 100) count++
+    }
+    if (count == 4) delete parsedUI.position
+  }
+  else {
+    parsedUI.position = [0,0,0,0];
+    parsedUI.visible = false;
+    delete parsedUI.components
+  }
+
+  if (!parsedUI.clickable) {
+    delete parsedUI.clickable;
+    delete parsedUI.shortcut
+  }
+
+  return parsedUI
+}, addWarn = function(ship, message, permanent, customY, allowDuplicates) {
+  let t = (Array.isArray(ship.custom.warn)?ship.custom.warn:[]).filter(Array.isArray);
+  if (!allowDuplicates) {
+    let ti;
+    while (ti = t.findIndex(u => u[0] == message), ti != -1) t.splice(ti,1);
+  }
+  let rt = [message,permanent?-1:game.step];
+  if (typeof customY == "number" && customY >=0 && customY <= 100) rt.push(customY);
+  t.push(rt);
+  ship.custom.warn = t.slice(-max_warns_per_chunk);
+}, removeWarn = function(ship, message, globalSearch) {
+  let t = (Array.isArray(ship.custom.warn)?ship.custom.warn:[]).filter(Array.isArray), ti;
+  while (ti = t.findIndex(u => u[0] == message), ti != -1) {
+    t.splice(ti,1);
+    if (!globalSearch) break;
+  }
+  ship.custom.warn = t.slice(-max_warns_per_chunk);
+}, addPlayerID = function (ship, spec, id) {
+  let t = ship.custom[spec];
+  t= [...new Set(t.concat(id))].filter(i => game.findShip(i))
+}, resetShip = function(ship, resetOpponent) {
+  Object.assign(ship.custom, {
+    ready: false,
+    spectate: false,
+    shipped: false,
+    mapped: false,
+    pendingTp: game.step,
+    lastMatchStep: game.step,
+    arena: ArenaManager.lobby,
+    invite_shown: false
+  });
+  let pair = game.findShip(ship.custom.paired);
+  if (pair) {
+    if (resetOpponent) resetShip(pair, !resetOpponent);
+    ship.custom.inviters.delete(pair.id);
+    ship.custom.inviting.delete(pair.id)
+  }
+  max(ship, ship.custom.type);
+  ship.custom.paired = null;
+  removeWarn(ship, "Warning: Arena shrinking!", true)
+}
+
+if (game.custom.maxID == null) game.custom.maxID = 0;
+
+let Arena = class {
+  constructor(x, y, index) {
+    this.x = x;
+    this.y = y;
+    this.members = [];
+    this.originalIndex = index;
+    this.reset(true);
+    switch (true) {
+      case index == lobby: this.lobby = true; break;
+      case index < lobby: this.index = index + 1; break;
+      default: this.index = index; break
+    }
+    let src, title;
+    if (this.lobby) {
+      src = "https://raw.githubusercontent.com/bhpsngum/SDC-public/master/img/credits.png";
+      title = "credits"
+    }
+    else {
+      title = "logo"+this.originalIndex;
+      src = "https://raw.githubusercontent.com/bhpsngum/SDC-public/master/img/logo.png"
+    }
+    setBackgroundCard(title, src, this.x, this.y, 30, 30)
+  }
+
+  getRadius = function () {
+    let percentage = ((shrink_start_time - this.duration/3660)/(shrink_start_time - shrink_end_time)) || 1, rad = (min_radius_ratio===false)?(arena_radius-fixed_min_radius):(arena_radius*min_radius_ratio) || 0;
+    rad = Math.max(Math.min(rad,arena_radius),0);
+    percentage = Math.max(Math.min(percentage,1),0);
+    if (!this.started || this.duration < 0) percentage = 0
+    return arena_radius - percentage * rad
+  }
+
+  assign (ship1, ship2) {
+    this.members.splice(0);
+    this.members.push(ship1, ship2);
+    this.members.forEach((ship, nodeInd) => {
+      ship.custom.arena = this;
+      ship.custom.spectate = false;
+      ship.custom.ready = false;
+      ArenaManager.set(ship, this.originalIndex, true, !!nodeInd);
+      ship.custom.type = ship.custom.type || ship.type;
+      ship.set({idle: true, type: ship.custom.type + ships_count, stats: 88888888, vx: 0, vy: 0});
+    });
+    this.started = true;
+  }
+
+  shrink (game, ignoreRadarUpdate = true) {
+    let prad = this.radius, grad = this.getRadius()*10;
+    if (prad != grad) {
+      this.radius = grad;
+      let shrinkSize = arena_radius - grad/10;
+      let objrad = 23.5*(arena_radius - shrinkSize), ar = 23.5*arena_radius;
+      setBackgroundCard("safeZoneMarker"+this.originalIndex, "https://raw.githubusercontent.com/Bhpsngum/SDC-public/master/img/low%20arena%20ring.png", this.x, this.y, this.lobby?ar:objrad, this.lobby?ar:objrad);
+      Radar.update(game, !ignoreRadarUpdate);
+    }
+  }
+
+  distTo (ship) {
+    return dist(this.x, this.y, ship.x, ship.y)
+  }
+
+  reset (init) {
+    this.members.splice(0);
+    this.duration = this.game_time;
+    this.countdown = this.dc_time;
+    this.shrink(game, init);
+    this.angle = 2*Math.PI*Math.random();
+    this.started = false;
+  }
+
+  endDuel (timesUp, ship) { // 'ship' lost the match (if any)
+    if (timesUp) {
+      this.members.forEach(tship => {
+        setStates(tship, false, false, true);
+        tship.custom.draws = (tship.custom.draws||0) + 1
+      })
+    }
+    else {
+      let killer;
+      if (this.members.indexOf(ship) != -1 && (killer = this.members.find(sus => sus != ship))) {
+        killer.custom.wins = getStat(killer, 'wins') + 1;
+        setStates(killer, true, false, false);
+        killer.custom.isLastLost = false;
+        ship.custom.losses = getStat(ship, 'losses') + 1;
+        setStates(ship, false, true, false);
+        ship.custom.isLastLost = true;
+      }
+    }
+
+    this.members.forEach(aship => resetShip(aship, true));
+
+    this.countdown = this.duration = 0;
+
+    modUtils.setTimeout(this.reset.bind(this), pendingTpDelay * 60)
+  }
+
+
+  tick (game) {
+    if (this.inCountdown) {
+      this.countdown--;
+      if (this.inMatch) this.members.forEach(ship => {
+        max(ship, ship.custom.type);
+        ship.set({idle: false, generator: 1e5, invulnerable: 0, crystals: 500});
+      })
+    }
+    else if (this.inMatch) {
+      let duration = this.duration--;
+      if (this.started && !this.ended && duration <= toTick(shrink_start_time) && duration >= toTick(shrink_end_time)) {
+        if (game.step % (shrink_interval*60) === 0) this.shrink(game);
+        this.members.forEach(ship => addWarn(ship, "Warning: Arena shrinking!", true, 90))
+      }
+      else this.members.forEach(ship => removeWarn(ship, "Warning: Arena shrinking!", true));
+      if (this.ended) this.endDuel(true);
+    }
+  }
+
+  get inCountdown () {
+    return this.started && this.countdown > 0
+  }
+
+  get inMatch () {
+    return this.started && this.countdown <= 0 && this.duration > 0
+  }
+
+  get isAvailable () {
+    return !(this.lobby || this.started || this.ended)
+  }
+
+  get ended () {
+    return this.started && !this.inCountdown && !this.inMatch
+  }
+
+  dc_time = toTick(duel_countdown/60);
+
+  game_time = toTick(duel_duration);
+}
+
+if (!game.custom.ArenaManager) game.custom.ArenaManager = {
+  findAvailable: function () { return this.list.find(v => v.isAvailable) },
+  waiting_count: 0,
+  list: [],
+  invites: [],
+  lobby: {},
+  waiting_time: -1,
+  checkPlayers: function(game) {
+    let waiting_list = game.ships.filter(ship => ship.custom.isReady());
+    if (this.isOpen(game)) {
+      let arenaSlot;
+      if (this.findAvailable() && waiting_list.length > 1) {
+        if (this.waiting_time < 0) this.waiting_time = queueWaitingTime * 60 + 45;
+        else --this.waiting_time;
+        if (this.waiting_time < 0) {
+          while ((arenaSlot = this.findAvailable()) && waiting_list.length > 1) arenaSlot.assign(...Array(2).fill(0).map(p => waiting_list.splice(rand(waiting_list.length), 1)[0]))
+        }
+      }
+      else this.waiting_time = -1;
+      while ((arenaSlot = this.findAvailable()) && this.invites.length > 0) arenaSlot.assign(...this.invites.splice(0, 1)[0])
+    }
+    else this.waiting_time = -1;
+    this.waiting_count = waiting_list.length + this.invites.length * 2;
+    this.list.forEach(arena => !arena.isAvailable && arena.tick(game))
+  },
+  isOpen: function (game) { return game.step <= toTick(this.game_duration)},
+  isRunning: function (game) {return this.isOpen(game) || this.list.filter(arena => arena.lobby || arena.isAvailable).length != this.list.length },
+  set: function(ship, node, forced, reversed) {
+    let nodpos = this.list[node] || this.lobby;
+    if (ship != null) {
+      if (!ship.custom.spectate) {
+        ship.custom.arena = nodpos;
+        ship.custom.TpTimestamp = game.step;
+      }
+      if (ship.custom.pendingTp === -1 || forced) {
+        ship.custom.pendingTp = -1;
+        let angle = 0, distance = 0, noded = !nodpos.lobby && !ship.custom.spectate;
+        if (noded) {
+          angle = nodpos.angle || 0;
+          if (reversed) angle += Math.PI;
+          distance = 2/3*r;
+        }
+        let {x,y} = nodpos, setup = {x:x+distance*Math.cos(angle),y:y+distance*Math.sin(angle)};
+        if (noded) setup.angle = 180*((1 + angle/Math.PI)%2);
+        ship.set(setup);
+      }
+    }
+  },
+  findNearest: function (ship) {
+    let t = this.list.map(i => i.distTo(ship)), min = Math.min(...t);
+    return this.list[t.indexOf(min)]
+  }
+}
+
+let ArenaManager = game.custom.ArenaManager;
+
+Object.assign(ArenaManager, {
+  Arena,
+  game_duration
+});
+
+// game Modules
+let initialization = function(game) {
+  setBackgroundCard("infoCard","https://raw.githubusercontent.com/bhpsngum/SDC-public/master/img/ShipCardInfo.png", 0, -30, 42*1.5, 25*1.5);
+  ArenaManager.list = grids.map((v,i) => new ArenaManager.Arena(v[0], v[1], i));
+  ArenaManager.lobby = ArenaManager.list.find(arena => arena.lobby);
+  Radar.update(game);
+  this.tick = main_game;
+}, main_game = function(game) {
+  check(game);
+  if (ArenaManager.isRunning(game)) ArenaManager.checkPlayers(game);
+  else {
+    game.setOpen(false);
+    check(game, true);
+    updatescoreboard(game);
+    game.ships.forEach(clearInds);
+    let lastStand = false;
+    leaderboard.forEach((i,j) => {
+      let ship = game.findShip(i.id);
+      if (ship != null) {
+        let text = "";
+        if (lastStand || Math.max(i.wins, i.losses, i.draws) == 0) lastStand = true;
+        else {
+          let rank = ship.custom.rank;
+          if (!isNaN(rank)) {
+            text = "You";
+            if (rank == 1) text += " win";
+            else {
+              text += "'re ranked "+rank;
+              switch(rank%10) {
+                case 1: if (Math.trunc(rank/10) != 1) {text+="st";break;}
+                case 2: if (Math.trunc(rank/10) != 1) {text+="nd";break;}
+                case 3: if (Math.trunc(rank/10) != 1) {text+="rd";break;}
+                default: text+="th";break;
+              }
+            }
+            text+="!";
+          }
+        }
+        ship.custom.endgameText = text
+      }
+    });
+    this.tick = forceEndgame;
+  }
+}, forceEndgame = function (game) {
+  check(game, null, true);
+}
+this.tick = initialization;
+this.event = function(event, game) {
+  let ship = event.ship, killer = event.killer;
+  if (ship != null) switch (event.name) {
+    case "ui_component_clicked":
+      let id = event.id;
+      if (ship.custom.arena.lobby) {
+        if (["block2", "steam_exit_block"].indexOf(id) == -1 && (!ship.custom.lastButtonClick || game.step - ship.custom.lastButtonClick > (buttonsDelay * 60))) {
+          ship.custom.lastButtonClick = game.step;
+          ship.custom.buttons_warned = false;
+          switch (id) {
+            case "chooser":
+              if (!ship.custom.spectate) {
+                ship.custom.shipped = !ship.custom.shipped;
+                if (ship.custom.shipped) ship.custom.invite_shown = false
+              }
+              else addWarn(ship, "You can't change ships when you're spectating!")
+              break;
+            case "ready":
+              if (ship.custom.spectate) {
+                addWarn(ship, "You can't be ready when you're spectating!");
+                ship.custom.ready = false
+              }
+              else {
+                ship.custom.ready = !ship.custom.ready;
+                ship.custom.spectate = false;
+                max(ship, ship.custom.prevShipCode || ship.custom.type || ship.type)
+              }
+              ship.custom.invite_shown = false;
+              break;
+            case "spectate":
+              if (ship.custom.isReady()) {
+                addWarn(ship, "You can't spectate when you're ready!");
+                ship.custom.spectate = false
+              }
+              else {
+                ship.custom.ready = false;
+                ship.custom.mapped = false;
+                ship.custom.shipped = false;
+                ship.custom.invite_shown = false;
+                ship.custom.spectate = !ship.custom.spectate;
+                if (ship.custom.spectate) ship.custom.prevShipCode = ship.custom.type || ship.type;
+                max(ship, ship.custom.prevShipCode || ship.custom.type || ship.type)
+              }
+              break;
+            case "map":
+              if (!ship.custom.isReady() && ship.custom.spectate) ship.custom.mapped = !ship.custom.mapped;
+              ship.custom.shipped = false;
+              break;
+            case "invite":
+              if (ship.custom.isReady()) {
+                addWarn(ship, "You can't invite someone when you are ready!");
+                ship.custom.invite_shown = false
+              }
+              else {
+                ship.custom.invite_shown = !ship.custom.invite_shown;
+                if (ship.custom.invite_shown) ship.custom.shipped = false
+              }
+              break;
+            case "snext":
+              if (ship.custom.shipped && !ship.custom.spectate && ship.custom.shipped) {
+                let ship_info = getShipsPage(ship).list;
+                max(ship, (ship_info[ship_info.findIndex(t => t.code === ship.custom.type)+1]||ship_info[0]).code)
+              }
+              break;
+            case "sprev":
+              if (ship.custom.shipped && !ship.custom.spectate && ship.custom.shipped) {
+                let ship_info = getShipsPage(ship).list;
+                max(ship, (ship_info[ship_info.findIndex(t => t.code === ship.custom.type)-1]||ship_info[ship_info.length-1]).code)
+              }
+              break;
+            case "invnext":
+              if (!ship.custom.isReady() && !ship.custom.spectate && ship.custom.invite_shown) ++ship.custom.invite_page;
+              break;
+            case "invprev":
+              if (!ship.custom.isReady() && !ship.custom.spectate && ship.custom.invite_shown) --ship.custom.invite_page;
+              break;
+            case "spnext":
+              if (ship.custom.shipped && !ship.custom.spectate && ship.custom.shipped) {
+                let page = ++ship.custom.ships_page;
+                if (page >= ship_infos.length) page = 0;
+                ship.custom.ships_page = page
+              }
+              break;
+            case "spprev":
+              if (ship.custom.shipped && !ship.custom.spectate && ship.custom.shipped) {
+                let page = --ship.custom.ships_page;
+                if (page < 0) page = ship_infos.length - 1;
+                ship.custom.ships_page = page
+              }
+              break;
+            case "nprev":
+              if (ship.custom.mapped && ship.custom.spectate && !ship.custom.isReady()) {
+                let node = ArenaManager.findNearest(ship).originalIndex;
+                ArenaManager.set(ship, (node>0?node:ArenaManager.list.length)-1, true);
+              }
+              break;
+            case "nnext":
+              if (ship.custom.mapped && ship.custom.spectate && !ship.custom.isReady()) {
+                let node = ArenaManager.findNearest(ship).originalIndex;
+                ArenaManager.set(ship, (node<(ArenaManager.list.length-1)?node:-1)+1, true);
+              }
+              break;
+            default:
+              switch (true) {
+                case id.match(/^n\d+$/) && ship.custom.spectate && !ship.custom.isReady() && ship.custom.mapped:
+                  ArenaManager.set(ship, +id.slice(1), true);
+                  break;
+                case id.match(/^s\d+$/) && !ship.custom.spectate && ship.custom.shipped: {
+                  let shipCode = +id.slice(1), page = getShipsPage(ship).list;
+                  max(ship, (page[shipCode] || page[0]).code);
+                  break
+                }
+                case id.match(/^invite\d+$/) && !ship.custom.isReady(): {
+                  let Iship = game.findShip(+id.match(/\d+/)[0]);
+                  if (!Iship || Iship === ship) addWarn(ship, "Player not found!");
+                  else if (Iship.custom.paired || Iship.custom.isReady() || ship.custom.inMatch()) addWarn(ship, "Player is not available right now.");
+                  else {
+                    let invite_waiting = Math.ceil((InvitationTimeOut * 60 - (game.step - ship.custom.invite_timeout.get(Iship.id))) / 60);
+                    if (invite_waiting > 0) addWarn(ship, `Please wait for ${invite_waiting} second${invite_waiting != 1 ? "s" : ""} before you can invite ${Iship.name} again`);
+                    else if (!ship.custom.inviters.get(Iship.id)) {
+                      Iship.custom.inviters.set(ship.id, game.step);
+                      ship.custom.inviting.set(Iship.id, game.step);
+                      Iship.custom.invite_timeout.delete(ship.id);
+                      ship.custom.invite_timeout.delete(Iship.id);
+                      addWarn(ship, `Invitation sent to ${Iship.name}!`);
+                      addWarn(Iship, `${ship.name} invited you to a duel!`);
+                    }
+                  }
+                  break
+                }
+                case id.match(/^accept\d+$/) && !ship.custom.isReady(): {
+                  let Iship = game.findShip(+id.match(/\d+/)[0]);
+                  if (!Iship || Iship === ship) addWarn(ship, "Player not found!");
+                  else if (Iship.custom.paired || Iship.custom.isReady() || ship.custom.inMatch()) addWarn(ship, "Player is not available right now.");
+                  else if (ship.custom.inviters.get(Iship.id)) {
+                    Iship.custom.paired = ship.id;
+                    ship.custom.paired = Iship.id;
+                    ArenaManager.invites.push([ship, Iship]);
+                    addWarn(Iship, `${ship.name} accepted your invite!`);
+                    addWarn(ship, `Accepted invitation from ${Iship.name}!`);
+                  }
+                  break
+                }
+                case id.match(/^decline\d+$/) && !ship.custom.isReady(): {
+                  let Iship = game.findShip(+id.match(/\d+/)[0]);
+                  if (!Iship || Iship === ship) addWarn(ship, "Player not found!");
+                  else {
+                    let isInviter = !!ship.custom.inviters.get(Iship.id), isInviting = !!ship.custom.inviting.get(Iship.id);
+                    if (isInviter) {
+                      ship.custom.inviters.delete(Iship.id);
+                      Iship.custom.inviting.delete(ship.id);
+                      Iship.custom.invite_timeout.set(ship.id, game.step);
+                      addWarn(ship, `Declined invitation from ${Iship.name}`);
+                      addWarn(Iship, `${ship.name} declined your invite!`)
+                    }
+                    else if (isInviting) {
+                      ship.custom.inviting.delete(Iship.id);
+                      ship.custom.invite_timeout.set(Iship.id, game.step);
+                      Iship.custom.inviters.delete(ship.id);
+                      addWarn(ship, `You removed your invitation to ${Iship.name}`);
+                      addWarn(Iship, `${ship.name} removed their invitation`)
+                    }
+                    let foundIndex;
+                    if ((isInviter || isInviting) && (foundIndex = ArenaManager.invites.findIndex(pairs => pairs.indexOf(ship) != -1)) != -1) {
+                      let [p1, p2] = ArenaManager.invites.splice(foundIndex, 1)[0];
+                      p1.custom.paired = null;
+                      p2.custom.paired = null;
+                      p1.custom.invite_timeout.set(p2.id, game.step);
+                      p2.custom.invite_timeout.set(p1.id, game.step)
+                    }
+                  }
+                  break
+                }
+              }
+          }
+        }
+        else if (!ship.custom.buttons_warned) {
+          ship.custom.buttons_warned = true;
+          addWarn(ship, "You are clicking buttons too fast, please hold up for a bit!")
+        }
+      }
+      break;
+    case "ship_destroyed":
+      if (!ship.custom.arena.lobby && ship.custom.arena.started) ship.custom.arena.endDuel(false, ship);
+      else resetShip(ship);
+      break;
+    case "ship_spawned":
+      ship.custom.pendingTp = -1;
+      ArenaManager.set(ship, lobby, true);
+      break;
+    default:
+      break;
+  }
+}
